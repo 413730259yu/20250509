@@ -6,6 +6,9 @@ let handPose;
 let hands = [];
 let circleX, circleY; // 圓的初始位置
 let circleSize = 100; // 圓的大小
+let isDraggingIndex = false; // 是否用食指拖動圓
+let isDraggingThumb = false; // 是否用大拇指拖動圓
+let trails = []; // 用於儲存圓的軌跡
 
 function preload() {
   // Initialize HandPose model with flipped video input
@@ -35,6 +38,13 @@ function setup() {
 
 function draw() {
   image(video, 0, 0);
+
+  // 繪製所有軌跡
+  for (let trail of trails) {
+    stroke(trail.color);
+    strokeWeight(10);
+    line(trail.x1, trail.y1, trail.x2, trail.y2);
+  }
 
   // 繪製圓
   fill(0, 0, 255, 150); // 藍色半透明
@@ -116,13 +126,52 @@ function draw() {
 
         // 檢測食指（keypoints[8]）是否碰觸圓
         let indexFinger = hand.keypoints[8];
-        let d = dist(indexFinger.x, indexFinger.y, circleX, circleY);
-        if (d < circleSize / 2) {
-          // 如果碰觸到圓，讓圓跟隨食指移動
+        let dIndex = dist(indexFinger.x, indexFinger.y, circleX, circleY);
+
+        if (dIndex < circleSize / 2) {
+          isDraggingIndex = true;
+          isDraggingThumb = false; // 確保只有一個手指在拖動
+        }
+
+        // 檢測大拇指（keypoints[4]）是否碰觸圓
+        let thumb = hand.keypoints[4];
+        let dThumb = dist(thumb.x, thumb.y, circleX, circleY);
+
+        if (dThumb < circleSize / 2) {
+          isDraggingThumb = true;
+          isDraggingIndex = false; // 確保只有一個手指在拖動
+        }
+
+        // 如果用食指拖動圓，畫出紅色軌跡
+        if (isDraggingIndex) {
+          trails.push({
+            x1: circleX,
+            y1: circleY,
+            x2: indexFinger.x,
+            y2: indexFinger.y,
+            color: [255, 0, 0], // 紅色
+          });
           circleX = indexFinger.x;
           circleY = indexFinger.y;
         }
+
+        // 如果用大拇指拖動圓，畫出綠色軌跡
+        if (isDraggingThumb) {
+          trails.push({
+            x1: circleX,
+            y1: circleY,
+            x2: thumb.x,
+            y2: thumb.y,
+            color: [0, 255, 0], // 綠色
+          });
+          circleX = thumb.x;
+          circleY = thumb.y;
+        }
       }
     }
+  } else {
+    // 如果手指離開圓，停止拖動
+    isDraggingIndex = false;
+    isDraggingThumb = false;
   }
 }
